@@ -5,18 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Guide to Machine Learning Concepts</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Stone & Teal -->
-    <!-- Application Structure Plan: A single-page, vertically scrolling application with a sticky top navigation for easy access to key thematic sections. This structure was chosen to present the distinct but related ML concepts in a logical, learnable sequence. Users can either scroll through the entire report for a comprehensive overview or use the navigation to jump directly to a specific topic of interest. Interactive charts and calculators are embedded within each relevant section to transform passive reading into an active learning experience, reinforcing understanding of abstract concepts like overfitting and evaluation metrics. -->
-    <!-- Visualization & Content Choices: 
-        - Data Partitioning: Goal: Inform. Method: Donut Chart (Chart.js). Interaction: Hover tooltips. Justification: A donut chart is an intuitive way to show the proportional split of a whole dataset into training, validation, and test sets.
-        - Over/Underfitting: Goal: Compare/Change. Method: Line Chart (Chart.js). Interaction: Buttons to switch between scenarios (Underfit, Good Fit, Overfit) dynamically update the chart and explanatory text. Justification: Visually demonstrates the core concept of diverging training and validation error, which is the hallmark of overfitting.
-        - Confusion Matrix: Goal: Inform/Interact. Method: HTML form + JS calculator. Interaction: User inputs TP, TN, FP, FN values and clicks a button to see calculated metrics (Accuracy, Recall, Precision). Justification: This makes the abstract formulas tangible and allows users to explore how different error types affect the final evaluation scores.
-        - Other Concepts: Goal: Inform. Method: Structured text with Tailwind CSS for layout (cards, columns). Justification: For definitional content like Classification vs. Regression, a clean, readable text layout is most effective. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -42,6 +39,10 @@
             border-radius: 0.5rem;
             transition: transform 0.2s, box-shadow 0.2s;
         }
+        .dark .metric-card {
+            background-color: #334155;
+            border-left-color: #14b8a6;
+        }
         .metric-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -50,19 +51,46 @@
             background-color: #14b8a6 !important;
             color: white !important;
         }
+        .dark-mode-toggle {
+            background: none;
+            border: 1px solid #cbd5e1;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .dark .dark-mode-toggle {
+            border-color: #64748b;
+            color: #e2e8f0;
+        }
+        .dark-mode-toggle:hover {
+            background-color: #f1f5f9;
+        }
+        .dark .dark-mode-toggle:hover {
+            background-color: #475569;
+        }
     </style>
 </head>
-<body class="bg-stone-50 text-slate-800">
+<body class="bg-stone-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
 
-    <header class="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50">
+    <header class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg shadow-sm sticky top-0 z-50">
         <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <h1 class="text-xl font-bold text-teal-600">ML Concepts Explorer</h1>
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="#partitioning" class="text-slate-600 hover:text-teal-600 font-medium">Data Partitioning</a>
-                    <a href="#fitting" class="text-slate-600 hover:text-teal-600 font-medium">Model Fit</a>
-                    <a href="#types" class="text-slate-600 hover:text-teal-600 font-medium">Model Types</a>
-                    <a href="#evaluation" class="text-slate-600 hover:text-teal-600 font-medium">Evaluation</a>
+                <h1 class="text-xl font-bold text-teal-600 dark:text-teal-400">ML Concepts Explorer</h1>
+                <div class="flex items-center space-x-4">
+                    <div class="hidden md:flex items-center space-x-8">
+                        <a href="#partitioning" class="text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 font-medium">Data Partitioning</a>
+                        <a href="#fitting" class="text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 font-medium">Model Fit</a>
+                        <a href="#types" class="text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 font-medium">Model Types</a>
+                        <a href="#evaluation" class="text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 font-medium">Evaluation</a>
+                    </div>
+                    <button id="dark-mode-toggle" class="dark-mode-toggle text-slate-600 dark:text-slate-300">
+                        <span id="theme-icon">🌙</span>
+                        <span class="hidden sm:inline">Dark</span>
+                    </button>
                 </div>
             </div>
         </nav>
@@ -72,71 +100,71 @@
         
         <section id="partitioning" class="py-16">
             <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">The Foundation: Data Partitioning</h2>
-                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">Before a model can learn, we must carefully divide our data. This section explains the critical process of splitting data into training, validation, and testing sets to build models that perform well on new, unseen information.</p>
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-4xl">The Foundation: Data Partitioning</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600 dark:text-slate-400">Before a model can learn, we must carefully divide our data. This section explains the critical process of splitting data into training, validation, and testing sets to build models that perform well on new, unseen information.</p>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                <div class="prose prose-lg text-slate-600 max-w-none">
+                <div class="prose prose-lg text-slate-600 dark:text-slate-400 max-w-none">
                     <p>In machine learning, we split our dataset into at least two, and more commonly three, distinct subsets:</p>
                     <ul>
                         <li><strong>Training Set:</strong> This is the largest portion of the data, used to teach the model. The model iterates over this data to learn the underlying patterns and relationships.</li>
                         <li><strong>Validation Set:</strong> This data is used to tune the model's hyperparameters and make decisions about the model's architecture. It acts as a neutral judge during training to see how well the model is generalizing.</li>
                         <li><strong>Test Set:</strong> This final, untouched set of data is used only once, after all training and tuning is complete. It provides an unbiased estimate of how the model will perform in the real world.</li>
                     </ul>
-                    <p class="font-semibold text-slate-700">Why partition? If we train and evaluate the model on the same data, it might simply memorize the answers. This leads to a model that seems perfect but fails spectacularly on new data—a problem known as overfitting. Partitioning ensures we are building a model that can genuinely generalize its learning.</p>
+                    <p class="font-semibold text-slate-700 dark:text-slate-300">Why partition? If we train and evaluate the model on the same data, it might simply memorize the answers. This leads to a model that seems perfect but fails spectacularly on new data—a problem known as overfitting. Partitioning ensures we are building a model that can genuinely generalize its learning.</p>
                 </div>
                 <div>
                     <div class="chart-container">
                         <canvas id="partitionChart"></canvas>
                     </div>
-                    <p class="text-center mt-4 text-sm text-slate-500">A typical 70-15-15 split for training, validation, and testing.</p>
+                    <p class="text-center mt-4 text-sm text-slate-500 dark:text-slate-400">A typical 70-15-15 split for training, validation, and testing.</p>
                 </div>
             </div>
         </section>
 
-        <div class="border-t border-slate-200"></div>
+        <div class="border-t border-slate-200 dark:border-slate-700"></div>
         
         <section id="fitting" class="py-16">
             <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">The Balancing Act: Underfitting vs. Overfitting</h2>
-                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">The central challenge in model training is finding the sweet spot between a model that's too simple (underfitting) and one that's too complex (overfitting). This interactive chart demonstrates how model performance changes during training and how to spot these common issues.</p>
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-4xl">The Balancing Act: Underfitting vs. Overfitting</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600 dark:text-slate-400">The central challenge in model training is finding the sweet spot between a model that's too simple (underfitting) and one that's too complex (overfitting). This interactive chart demonstrates how model performance changes during training and how to spot these common issues.</p>
             </div>
             
-            <div class="bg-white p-6 rounded-lg shadow-lg">
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
                 <div class="flex justify-center space-x-2 mb-6">
-                    <button id="btn-underfit" class="px-4 py-2 text-sm font-medium rounded-md bg-slate-200 text-slate-700 hover:bg-slate-300">Underfitting</button>
-                    <button id="btn-goodfit" class="px-4 py-2 text-sm font-medium rounded-md bg-slate-200 text-slate-700 hover:bg-slate-300 btn-active">Good Fit</button>
-                    <button id="btn-overfit" class="px-4 py-2 text-sm font-medium rounded-md bg-slate-200 text-slate-700 hover:bg-slate-300">Overfitting</button>
+                    <button id="btn-underfit" class="px-4 py-2 text-sm font-medium rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Underfitting</button>
+                    <button id="btn-goodfit" class="px-4 py-2 text-sm font-medium rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 btn-active">Good Fit</button>
+                    <button id="btn-overfit" class="px-4 py-2 text-sm font-medium rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600">Overfitting</button>
                 </div>
                 <div class="chart-container mb-6">
                     <canvas id="fitChart"></canvas>
                 </div>
-                <div id="fit-description" class="prose prose-lg max-w-none mx-auto text-slate-600 bg-stone-100 p-6 rounded-md"></div>
+                <div id="fit-description" class="prose prose-lg max-w-none mx-auto text-slate-600 dark:text-slate-400 bg-stone-100 dark:bg-slate-700 p-6 rounded-md"></div>
             </div>
 
             <div class="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="font-bold text-xl text-red-600 mb-2">Underfitting: Too Simple</h3>
-                    <p class="text-slate-600 mb-4">An underfit model is not complex enough to capture the underlying trend in the data. It performs poorly on both the training data and new data.</p>
-                    <div class="border-t border-slate-200 pt-4 mt-4">
-                        <p class="font-semibold text-sm text-slate-500 mb-2">Real-Life Example:</p>
-                        <p class="text-slate-600">Predicting house prices using only the number of bedrooms. The model is too simple and ignores critical factors like location and square footage, leading to inaccurate predictions for almost all houses.</p>
-                        <p class="font-semibold text-sm text-slate-500 mt-4 mb-2">How to Minimize:</p>
-                        <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+                    <h3 class="font-bold text-xl text-red-600 dark:text-red-400 mb-2">Underfitting: Too Simple</h3>
+                    <p class="text-slate-600 dark:text-slate-400 mb-4">An underfit model is not complex enough to capture the underlying trend in the data. It performs poorly on both the training data and new data.</p>
+                    <div class="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
+                        <p class="font-semibold text-sm text-slate-500 dark:text-slate-400 mb-2">Real-Life Example:</p>
+                        <p class="text-slate-600 dark:text-slate-400">Predicting house prices using only the number of bedrooms. The model is too simple and ignores critical factors like location and square footage, leading to inaccurate predictions for almost all houses.</p>
+                        <p class="font-semibold text-sm text-slate-500 dark:text-slate-400 mt-4 mb-2">How to Minimize:</p>
+                        <ul class="list-disc list-inside text-sm text-slate-600 dark:text-slate-400 space-y-1">
                             <li>Use a more complex model (e.g., more layers in a neural network).</li>
                             <li>Add more relevant features to the data.</li>
                             <li>Train the model for a longer duration.</li>
                         </ul>
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="font-bold text-xl text-blue-600 mb-2">Overfitting: Too Complex</h3>
-                    <p class="text-slate-600 mb-4">An overfit model learns the training data too well, including its noise and random fluctuations. It performs exceptionally well on training data but poorly on new data.</p>
-                    <div class="border-t border-slate-200 pt-4 mt-4">
-                        <p class="font-semibold text-sm text-slate-500 mb-2">Real-Life Example:</p>
-                        <p class="text-slate-600">A facial recognition system trained only on brightly lit, forward-facing photos. The model memorizes these specific conditions and fails to recognize the same person in different lighting or from a side angle.</p>
-                        <p class="font-semibold text-sm text-slate-500 mt-4 mb-2">How to Minimize:</p>
-                        <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
+                    <h3 class="font-bold text-xl text-blue-600 dark:text-blue-400 mb-2">Overfitting: Too Complex</h3>
+                    <p class="text-slate-600 dark:text-slate-400 mb-4">An overfit model learns the training data too well, including its noise and random fluctuations. It performs exceptionally well on training data but poorly on new data.</p>
+                    <div class="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
+                        <p class="font-semibold text-sm text-slate-500 dark:text-slate-400 mb-2">Real-Life Example:</p>
+                        <p class="text-slate-600 dark:text-slate-400">A facial recognition system trained only on brightly lit, forward-facing photos. The model memorizes these specific conditions and fails to recognize the same person in different lighting or from a side angle.</p>
+                        <p class="font-semibold text-sm text-slate-500 dark:text-slate-400 mt-4 mb-2">How to Minimize:</p>
+                        <ul class="list-disc list-inside text-sm text-slate-600 dark:text-slate-400 space-y-1">
                             <li>Gather more diverse training data.</li>
                             <li>Simplify the model (e.g., fewer features or layers).</li>
                             <li>Use regularization techniques to penalize complexity.</li>
@@ -147,37 +175,37 @@
             </div>
         </section>
 
-        <div class="border-t border-slate-200"></div>
+        <div class="border-t border-slate-200 dark:border-slate-700"></div>
 
         <section id="types" class="py-16">
             <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">What's the Goal? Classification vs. Regression</h2>
-                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">Machine learning tasks generally fall into two categories based on their output. This section clarifies the difference between predicting a category (Classification) and predicting a continuous value (Regression).</p>
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-4xl">What's the Goal? Classification vs. Regression</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600 dark:text-slate-400">Machine learning tasks generally fall into two categories based on their output. This section clarifies the difference between predicting a category (Classification) and predicting a continuous value (Regression).</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white p-8 rounded-lg shadow-lg text-center">
-                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-100 mb-4">
+                <div class="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg text-center">
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-900 mb-4">
                         <span class="text-2xl">🏷️</span>
                     </div>
-                    <h3 class="text-2xl font-bold text-slate-800">Classification</h3>
-                    <p class="mt-2 text-slate-600">Predicts a discrete, categorical label. The output belongs to a finite set of classes.</p>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-200">Classification</h3>
+                    <p class="mt-2 text-slate-600 dark:text-slate-400">Predicts a discrete, categorical label. The output belongs to a finite set of classes.</p>
                     <div class="text-left mt-6">
-                        <p class="font-semibold text-slate-700">Examples:</p>
-                        <ul class="mt-2 list-disc list-inside text-slate-600 space-y-1">
+                        <p class="font-semibold text-slate-700 dark:text-slate-300">Examples:</p>
+                        <ul class="mt-2 list-disc list-inside text-slate-600 dark:text-slate-400 space-y-1">
                             <li><strong>Spam Detection:</strong> Is an email "Spam" or "Not Spam"?</li>
                             <li><strong>Image Recognition:</strong> Does an image contain a "Cat", "Dog", or "Bird"?</li>
                         </ul>
                     </div>
                 </div>
-                <div class="bg-white p-8 rounded-lg shadow-lg text-center">
-                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 mb-4">
+                <div class="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg text-center">
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900 mb-4">
                         <span class="text-2xl">📈</span>
                     </div>
-                    <h3 class="text-2xl font-bold text-slate-800">Regression</h3>
-                    <p class="mt-2 text-slate-600">Predicts a continuous, numerical value. The output can be any number within a range.</p>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-200">Regression</h3>
+                    <p class="mt-2 text-slate-600 dark:text-slate-400">Predicts a continuous, numerical value. The output can be any number within a range.</p>
                     <div class="text-left mt-6">
-                        <p class="font-semibold text-slate-700">Examples:</p>
-                        <ul class="mt-2 list-disc list-inside text-slate-600 space-y-1">
+                        <p class="font-semibold text-slate-700 dark:text-slate-300">Examples:</p>
+                        <ul class="mt-2 list-disc list-inside text-slate-600 dark:text-slate-400 space-y-1">
                             <li><strong>House Price Prediction:</strong> What is the market value of a house in dollars?</li>
                             <li><strong>Temperature Forecast:</strong> What will the temperature be in degrees tomorrow?</li>
                         </ul>
@@ -186,95 +214,95 @@
             </div>
         </section>
 
-        <div class="border-t border-slate-200"></div>
+        <div class="border-t border-slate-200 dark:border-slate-700"></div>
 
         <section id="evaluation" class="py-16">
             <div class="text-center mb-12">
-                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Measuring Success: Evaluation Metrics</h2>
-                 <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">How do we know if our model is any good? We use evaluation metrics. This section explores the Confusion Matrix and explains the crucial difference between metrics like Accuracy and Recall, showing you how to interpret them in real-world scenarios.</p>
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-4xl">Measuring Success: Evaluation Metrics</h2>
+                 <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600 dark:text-slate-400">How do we know if our model is any good? We use evaluation metrics. This section explores the Confusion Matrix and explains the crucial difference between metrics like Accuracy and Recall, showing you how to interpret them in real-world scenarios.</p>
             </div>
 
-            <div class="bg-white p-6 rounded-lg shadow-lg">
-                <h3 class="text-2xl font-bold text-center mb-6 text-slate-800">The Confusion Matrix</h3>
-                <p class="text-slate-600 text-center max-w-3xl mx-auto mb-8">A confusion matrix gives a detailed breakdown of a classification model's performance. It shows not just how many predictions were right or wrong, but what kind of errors were made.</p>
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
+                <h3 class="text-2xl font-bold text-center mb-6 text-slate-800 dark:text-slate-200">The Confusion Matrix</h3>
+                <p class="text-slate-600 dark:text-slate-400 text-center max-w-3xl mx-auto mb-8">A confusion matrix gives a detailed breakdown of a classification model's performance. It shows not just how many predictions were right or wrong, but what kind of errors were made.</p>
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
                     <div class="md:col-span-3">
                          <div class="grid grid-cols-3 gap-2 text-sm text-center">
                             <div></div>
-                            <div class="font-bold p-2">Predicted Positive</div>
-                            <div class="font-bold p-2">Predicted Negative</div>
+                            <div class="font-bold p-2 text-slate-800 dark:text-slate-200">Predicted Positive</div>
+                            <div class="font-bold p-2 text-slate-800 dark:text-slate-200">Predicted Negative</div>
 
-                            <div class="font-bold p-2 self-center">Actual<br>Positive</div>
-                            <div class="bg-green-100 text-green-800 p-4 rounded">
+                            <div class="font-bold p-2 self-center text-slate-800 dark:text-slate-200">Actual<br>Positive</div>
+                            <div class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 p-4 rounded">
                                 <span class="font-bold block">True Positive (TP)</span>
                                 <p>Correctly identified as positive.</p>
                             </div>
-                            <div class="bg-red-100 text-red-800 p-4 rounded">
+                            <div class="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-4 rounded">
                                 <span class="font-bold block">False Negative (FN)</span>
                                 <p>Incorrectly identified as negative.</p>
                             </div>
 
-                            <div class="font-bold p-2 self-center">Actual<br>Negative</div>
-                            <div class="bg-red-100 text-red-800 p-4 rounded">
+                            <div class="font-bold p-2 self-center text-slate-800 dark:text-slate-200">Actual<br>Negative</div>
+                            <div class="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-4 rounded">
                                 <span class="font-bold block">False Positive (FP)</span>
                                 <p>Incorrectly identified as positive.</p>
                             </div>
-                            <div class="bg-green-100 text-green-800 p-4 rounded">
+                            <div class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 p-4 rounded">
                                 <span class="font-bold block">True Negative (TN)</span>
                                 <p>Correctly identified as negative.</p>
                             </div>
                         </div>
                     </div>
-                    <div class="md:col-span-2 mt-8 md:mt-0 p-4 bg-slate-50 rounded-lg border">
-                        <h4 class="font-bold text-lg mb-4 text-center">Interactive Calculator</h4>
+                    <div class="md:col-span-2 mt-8 md:mt-0 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg border dark:border-slate-600">
+                        <h4 class="font-bold text-lg mb-4 text-center text-slate-800 dark:text-slate-200">Interactive Calculator</h4>
                         <div class="grid grid-cols-2 gap-4">
                              <div>
-                                <label for="tp" class="block text-sm font-medium text-slate-700">TP</label>
-                                <input type="number" id="tp" value="90" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm">
-                            </div>
-                             <div>
-                                <label for="fn" class="block text-sm font-medium text-slate-700">FN</label>
-                                <input type="number" id="fn" value="10" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm">
-                            </div>
-                             <div>
-                                <label for="fp" class="block text-sm font-medium text-slate-700">FP</label>
-                                <input type="number" id="fp" value="5" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm">
+                                <label for="tp" class="block text-sm font-medium text-slate-700 dark:text-slate-300">TP</label>
+                                <input type="number" id="tp" value="90" class="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm">
                             </div>
                             <div>
-                                <label for="tn" class="block text-sm font-medium text-slate-700">TN</label>
-                                <input type="number" id="tn" value="95" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm">
+                                <label for="fn" class="block text-sm font-medium text-slate-700 dark:text-slate-300">FN</label>
+                                <input type="number" id="fn" value="10" class="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label for="fp" class="block text-sm font-medium text-slate-700 dark:text-slate-300">FP</label>
+                                <input type="number" id="fp" value="5" class="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label for="tn" class="block text-sm font-medium text-slate-700 dark:text-slate-300">TN</label>
+                                <input type="number" id="tn" value="95" class="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm">
                             </div>
                         </div>
-                        <button id="calculate-btn" class="mt-4 w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-700">Calculate Metrics</button>
+                        <button id="calculate-btn" class="mt-4 w-full bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white font-bold py-2 px-4 rounded">Calculate Metrics</button>
                     </div>
                 </div>
             </div>
 
             <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <div class="metric-card">
-                    <h4 class="font-bold text-lg text-slate-800">Accuracy</h4>
-                    <p class="text-sm font-mono text-slate-500 mb-2">(TP + TN) / Total</p>
-                    <p class="text-slate-600 mb-4">What fraction of predictions were correct? Best for balanced datasets where all classes are equally important.</p>
-                    <p class="text-3xl font-bold text-teal-600" id="accuracy-val">--%</p>
+                    <h4 class="font-bold text-lg text-slate-800 dark:text-slate-200">Accuracy</h4>
+                    <p class="text-sm font-mono text-slate-500 dark:text-slate-400 mb-2">(TP + TN) / Total</p>
+                    <p class="text-slate-600 dark:text-slate-400 mb-4">What fraction of predictions were correct? Best for balanced datasets where all classes are equally important.</p>
+                    <p class="text-3xl font-bold text-teal-600 dark:text-teal-400" id="accuracy-val">--%</p>
                 </div>
                 <div class="metric-card">
-                    <h4 class="font-bold text-lg text-slate-800">Recall (Sensitivity)</h4>
-                    <p class="text-sm font-mono text-slate-500 mb-2">TP / (TP + FN)</p>
-                    <p class="text-slate-600 mb-4">Of all actual positives, how many did we find? Crucial when False Negatives are costly (e.g., medical diagnosis).</p>
-                    <p class="text-3xl font-bold text-teal-600" id="recall-val">--%</p>
+                    <h4 class="font-bold text-lg text-slate-800 dark:text-slate-200">Recall (Sensitivity)</h4>
+                    <p class="text-sm font-mono text-slate-500 dark:text-slate-400 mb-2">TP / (TP + FN)</p>
+                    <p class="text-slate-600 dark:text-slate-400 mb-4">Of all actual positives, how many did we find? Crucial when False Negatives are costly (e.g., medical diagnosis).</p>
+                    <p class="text-3xl font-bold text-teal-600 dark:text-teal-400" id="recall-val">--%</p>
                 </div>
                  <div class="metric-card">
-                    <h4 class="font-bold text-lg text-slate-800">Precision</h4>
-                    <p class="text-sm font-mono text-slate-500 mb-2">TP / (TP + FP)</p>
-                    <p class="text-slate-600 mb-4">Of all positive predictions, how many were correct? Important when False Positives are costly (e.g., spam filters).</p>
-                    <p class="text-3xl font-bold text-teal-600" id="precision-val">--%</p>
+                    <h4 class="font-bold text-lg text-slate-800 dark:text-slate-200">Precision</h4>
+                    <p class="text-sm font-mono text-slate-500 dark:text-slate-400 mb-2">TP / (TP + FP)</p>
+                    <p class="text-slate-600 dark:text-slate-400 mb-4">Of all positive predictions, how many were correct? Important when False Positives are costly (e.g., spam filters).</p>
+                    <p class="text-3xl font-bold text-teal-600 dark:text-teal-400" id="precision-val">--%</p>
                 </div>
             </div>
 
         </section>
     </main>
 
-    <footer class="bg-slate-800 text-slate-300">
+    <footer class="bg-slate-800 dark:bg-slate-950 text-slate-300 dark:text-slate-400">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center">
             <p>&copy; 2025 Interactive Machine Learning Concepts Guide by Thien Nguyen. All rights reserved.</p>
         </div>
@@ -282,7 +310,59 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const html = document.documentElement;
+        
+        function updateThemeIcon(isDark) {
+            themeIcon.textContent = isDark ? '☀️' : '🌙';
+            darkModeToggle.querySelector('span:last-child').textContent = isDark ? 'Light' : 'Dark';
+        }
+        
+        // Check for saved theme preference or default to light mode
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            html.classList.add('dark');
+            updateThemeIcon(true);
+        }
+        
+        darkModeToggle.addEventListener('click', () => {
+            const isDark = html.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+            
+            // Update chart colors when theme changes
+            updateChartColors();
+        });
 
+        // Function to update chart colors based on theme
+        function updateChartColors() {
+            const isDark = html.classList.contains('dark');
+            const textColor = isDark ? '#e2e8f0' : '#334155';
+            const gridColor = isDark ? '#475569' : '#e2e8f0';
+            
+            // Update partition chart
+            if (partitionChart) {
+                partitionChart.options.plugins.legend.labels.color = textColor;
+                partitionChart.options.plugins.legend.labels.font = { family: 'Inter' };
+                partitionChart.update();
+            }
+            
+            // Update fit chart
+            if (fitChart) {
+                fitChart.options.scales.x.ticks.color = textColor;
+                fitChart.options.scales.y.ticks.color = textColor;
+                fitChart.options.scales.x.title.color = textColor;
+                fitChart.options.scales.y.title.color = textColor;
+                fitChart.options.scales.x.grid.color = gridColor;
+                fitChart.options.scales.y.grid.color = gridColor;
+                fitChart.options.plugins.legend.labels.color = textColor;
+                fitChart.update();
+            }
+        }
+
+        // Data Partitioning Chart
         const partitionCtx = document.getElementById('partitionChart').getContext('2d');
         const partitionChart = new Chart(partitionCtx, {
             type: 'doughnut',
@@ -303,6 +383,11 @@
                 plugins: {
                     legend: {
                         position: 'bottom',
+                        labels: {
+                            font: {
+                                family: 'Inter'
+                            }
+                        }
                     },
                     tooltip: {
                         callbacks: {
@@ -315,75 +400,22 @@
             }
         });
 
+        // Overfitting Chart
         const fitCtx = document.getElementById('fitChart').getContext('2d');
-        let fitChart;
-        
-        const fitData = {
-            underfit: {
-                labels: ['Epoch 1', 'Epoch 5', 'Epoch 10', 'Epoch 15', 'Epoch 20'],
-                trainError: [0.8, 0.75, 0.7, 0.68, 0.65],
-                valError: [0.82, 0.78, 0.74, 0.72, 0.70],
-                description: `
-                    <h4 class="font-bold text-slate-800">Scenario: Underfitting</h4>
-                    <p>Here, both the training error (blue) and validation error (green) are high and decrease very slowly. The model isn't powerful enough to learn the underlying patterns in the data. It's performing poorly overall.</p>
-                `
-            },
-            goodfit: {
-                labels: ['Epoch 1', 'Epoch 5', 'Epoch 10', 'Epoch 15', 'Epoch 20'],
-                trainError: [0.8, 0.5, 0.3, 0.2, 0.15],
-                valError: [0.82, 0.55, 0.38, 0.32, 0.30],
-                description: `
-                    <h4 class="font-bold text-slate-800">Scenario: Good Fit</h4>
-                    <p>This is the ideal scenario. The training error and validation error both decrease and then stabilize at a low value. The gap between them is minimal, indicating the model has learned the general patterns without memorizing noise.</p>
-                `
-            },
-            overfit: {
-                labels: ['Epoch 1', 'Epoch 5', 'Epoch 10', 'Epoch 15', 'Epoch 20'],
-                trainError: [0.8, 0.5, 0.3, 0.1, 0.05],
-                valError: [0.82, 0.55, 0.38, 0.45, 0.60],
-                description: `
-                    <h4 class="font-bold text-slate-800">Scenario: Overfitting</h4>
-                    <p>Notice how the training error (blue) continues to plummet, while the validation error (green) begins to rise after a certain point. This divergence is the classic sign of overfitting. The model is starting to memorize the training data, losing its ability to generalize to new data.</p>
-                `
-            }
-        };
-
-        const fitDescElement = document.getElementById('fit-description');
-        const fitButtons = {
-            underfit: document.getElementById('btn-underfit'),
-            goodfit: document.getElementById('btn-goodfit'),
-            overfit: document.getElementById('btn-overfit')
-        };
-        
-        function updateFitChart(scenario) {
-            const data = fitData[scenario];
-            fitChart.data.labels = data.labels;
-            fitChart.data.datasets[0].data = data.trainError;
-            fitChart.data.datasets[1].data = data.valError;
-            fitChart.update();
-            fitDescElement.innerHTML = data.description;
-            Object.values(fitButtons).forEach(btn => btn.classList.remove('btn-active'));
-            fitButtons[scenario].classList.add('btn-active');
-        }
-
-        fitChart = new Chart(fitCtx, {
+        const fitChart = new Chart(fitCtx, {
             type: 'line',
             data: {
-                labels: [],
+                labels: Array.from({ length: 10 }, (_, i) => `Epoch ${i + 1}`),
                 datasets: [{
                     label: 'Training Error',
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     data: [],
-                    tension: 0.1,
-                    fill: true
+                    borderColor: '#14b8a6',
+                    tension: 0.3
                 }, {
                     label: 'Validation Error',
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     data: [],
-                    tension: 0.1,
-                    fill: true
+                    borderColor: '#6366f1',
+                    tension: 0.3
                 }]
             },
             options: {
@@ -392,50 +424,119 @@
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: 'Model Error' }
+                        title: {
+                            display: true,
+                            text: 'Error Rate',
+                            font: { family: 'Inter' }
+                        }
                     },
                     x: {
-                        title: { display: true, text: 'Training Epochs' }
+                        title: {
+                            display: true,
+                            text: 'Training Epochs',
+                            font: { family: 'Inter' }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: { family: 'Inter' }
+                        }
                     }
                 }
             }
         });
-        
-        fitButtons.underfit.addEventListener('click', () => updateFitChart('underfit'));
-        fitButtons.goodfit.addEventListener('click', () => updateFitChart('goodfit'));
-        fitButtons.overfit.addEventListener('click', () => updateFitChart('overfit'));
 
-        updateFitChart('goodfit');
+        const underfitData = {
+            training: [80, 75, 72, 70, 68, 66, 65, 64, 63, 62],
+            validation: [82, 78, 75, 74, 73, 72, 71, 70, 69, 68],
+            description: "An **underfitting** model is too simple to learn the patterns in the data. Both training and validation errors are high and don't decrease significantly. The model lacks complexity to capture the data's true relationship."
+        };
 
+        const goodfitData = {
+            training: [80, 60, 45, 30, 20, 15, 12, 10, 9, 8],
+            validation: [82, 62, 48, 35, 25, 18, 14, 11, 10, 10],
+            description: "A **good fit** model learns the patterns well. Both training and validation errors decrease and stabilize together, indicating that the model is generalizing effectively to new data. This is the optimal state."
+        };
+
+        const overfitData = {
+            training: [80, 50, 25, 10, 5, 3, 2, 1, 0.5, 0.2],
+            validation: [82, 55, 30, 15, 18, 22, 28, 35, 42, 50],
+            description: "An **overfitting** model learns the training data perfectly, but fails on new data. The training error continues to drop, while the validation error starts to increase. The model is memorizing noise instead of learning the core patterns."
+        };
+
+        const fitButtons = document.querySelectorAll('#fitting button');
+        const fitDescription = document.getElementById('fit-description');
+
+        function updateFitChart(data) {
+            fitChart.data.datasets[0].data = data.training;
+            fitChart.data.datasets[1].data = data.validation;
+            fitChart.update();
+            fitDescription.innerHTML = data.description;
+        }
+
+        fitButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                fitButtons.forEach(btn => btn.classList.remove('btn-active'));
+                e.target.classList.add('btn-active');
+                if (e.target.id === 'btn-underfit') {
+                    updateFitChart(underfitData);
+                } else if (e.target.id === 'btn-goodfit') {
+                    updateFitChart(goodfitData);
+                } else if (e.target.id === 'btn-overfit') {
+                    updateFitChart(overfitData);
+                }
+            });
+        });
+
+        // Initialize with good fit data
+        updateFitChart(goodfitData);
+        updateChartColors();
+
+        // Confusion Matrix Calculator
         const calculateBtn = document.getElementById('calculate-btn');
         const tpInput = document.getElementById('tp');
         const fnInput = document.getElementById('fn');
         const fpInput = document.getElementById('fp');
         const tnInput = document.getElementById('tn');
-        
         const accuracyVal = document.getElementById('accuracy-val');
         const recallVal = document.getElementById('recall-val');
         const precisionVal = document.getElementById('precision-val');
 
         function calculateMetrics() {
-            const tp = parseFloat(tpInput.value) || 0;
-            const fn = parseFloat(fnInput.value) || 0;
-            const fp = parseFloat(fpInput.value) || 0;
-            const tn = parseFloat(tnInput.value) || 0;
-
+            const tp = parseInt(tpInput.value) || 0;
+            const fn = parseInt(fnInput.value) || 0;
+            const fp = parseInt(fpInput.value) || 0;
+            const tn = parseInt(tnInput.value) || 0;
+            
             const total = tp + fn + fp + tn;
-            
-            const accuracy = total > 0 ? (tp + tn) / total : 0;
-            const recall = (tp + fn) > 0 ? tp / (tp + fn) : 0;
-            const precision = (tp + fp) > 0 ? tp / (tp + fp) : 0;
-            
-            accuracyVal.textContent = `${(accuracy * 100).toFixed(1)}%`;
-            recallVal.textContent = `${(recall * 100).toFixed(1)}%`;
-            precisionVal.textContent = `${(precision * 100).toFixed(1)}%`;
+            if (total === 0) {
+                accuracyVal.textContent = 'N/A';
+                recallVal.textContent = 'N/A';
+                precisionVal.textContent = 'N/A';
+                return;
+            }
+
+            const accuracy = ((tp + tn) / total) * 100;
+            const recall = (tp + fn) === 0 ? 0 : (tp / (tp + fn)) * 100;
+            const precision = (tp + fp) === 0 ? 0 : (tp / (tp + fp)) * 100;
+
+            accuracyVal.textContent = `${accuracy.toFixed(1)}%`;
+            recallVal.textContent = `${recall.toFixed(1)}%`;
+            precisionVal.textContent = `${precision.toFixed(1)}%`;
         }
 
-        calculateBtn.addEventListener('click', calculateMetrics);
+        // Calculate initial metrics
         calculateMetrics();
+
+        // Add event listener to the button
+        calculateBtn.addEventListener('click', calculateMetrics);
+
+        // Optional: Recalculate on input change
+        [tpInput, fnInput, fpInput, tnInput].forEach(input => {
+            input.addEventListener('input', calculateMetrics);
+        });
     });
     </script>
 </body>
