@@ -1,0 +1,369 @@
+# Set environment variables
+import os
+os.environ['GOOGLE_API_KEY'] = 'GOOGLE_API_KEY'
+os.environ['GOOGLE_CSE_ID'] = 'GOOGLE_CSE_ID'
+
+# Run the scraper
+# Since the scraper is defined in the cell below,
+# you can call the main function from that cell directly after this cell executes.
+
+import requests
+from bs4 import BeautifulSoup
+import time
+import json
+import re
+import os
+from typing import List, Dict, Optional
+from datetime import datetime
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+class JobScraper:
+    def __init__(self, api_key: str, cse_id: str):
+        self.api_key = api_key
+        self.cse_id = cse_id
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        })
+
+    def search_jobs(self, query: str, num_results: int = 20) -> List[Dict]:
+        """Search for jobs using Google Custom Search API"""
+        url = "https://www.googleapis.com/customsearch/v1"
+        results = []
+
+        for start_index in range(1, num_results + 1, 10):
+            params = {
+                'q': query,
+                'key': self.api_key,
+                'cx': self.cse_id,
+                'num': min(10, num_results - len(results)),
+                'start': start_index
+            }
+
+            try:
+                response = self.session.get(url, params=params, timeout=10)
+                response.raise_for_status()
+
+                items = response.json().get('items', [])
+                if not items:
+                    logger.info(f"No more results found at start={start_index}")
+                    break
+
+                for item in items:
+                    results.append({
+                        'title': item.get('title', ''),
+                        'snippet': item.get('snippet', ''),
+                        'link': item.get('link', '')
+                    })
+
+                logger.info(f"Retrieved {len(results)} results so far")
+                time.sleep(1)  # Rate limiting
+
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Search API error: {e}")
+                break
+            except Exception as e:
+                logger.error(f"Unexpected error during search: {e}")
+                break
+
+        return results
+
+    def extract_job_details(self, url: str) -> Dict:
+        """Extract job description and metadata from URL"""
+        try:
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+
+            # Remove script and style elements
+            for element in soup(['script', 'style', 'nav', 'header', 'footer']):
+                element.decompose()
+
+            # Extract job description
+            description = self._extract_description(soup)
+
+            # Extract metadata
+            company = self._extract_company(soup, url)
+            location = self._extract_location(soup)
+
+            return {
+                "description": description,
+                "company": company,
+                "location": location,
+                "success": True
+            }
+
+        except requests.exceptions.Timeout:
+            logger.warning(f"Timeout fetching: {url}")
+            return {"description": "Timeout", "success": False}
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Request error for {url}: {e}")
+            return {"description": "Request failed", "success": False}
+        except Exception as e:
+            logger.error(f"Error extracting from {url}: {e}")
+            return {"description": f"Error: {e}", "success": False}
+
+    def _extract_description(self, soup: BeautifulSoup) -> str:
+        """Extract job description from parsed HTML"""
+        # Try common job description selectors
+        selectors = [
+            {'class': re.compile(r'job[-_]?description', re.I)},
+            {'class': re.compile(r'description', re.I)},
+            {'id': re.compile(r'job[-_]?description', re.I)},
+            {'class': re.compile(r'posting[-_]?description', re.I)}
+        ]
+
+        for selector in selectors:
+            element = soup.find(['div', 'section', 'article'], selector)
+            if element:
+                text = element.get_text(separator=' ', strip=True)
+                if len(text) > 100:
+                    return text
+
+        # Fallback: find longest text block
+        text_blocks = soup.find_all(['div', 'section', 'article'])
+        long_texts = [
+            block.get_text(separator=' ', strip=True)
+            for block in text_blocks
+            if len(block.get_text()) > 200
+        ]
+
+        return long_texts[0] if long_texts else "No description found"
+
+    def _extract_company(self, soup: BeautifulSoup, url: str) -> Optional[str]:
+        """Extract company name from HTML or URL"""
+        # Try meta tags
+        meta_patterns = ['og:site_name', 'application-name', 'author']
+        for pattern in meta_patterns:
+            meta = soup.find('meta', property=pattern) or soup.find('meta', attrs={'name': pattern})
+            if meta and meta.get('content'):
+                return meta['content'].strip()
+
+        # Try common selectors
+        selectors = [
+            {'class': re.compile(r'company[-_]?name', re.I)},
+            {'class': re.compile(r'employer', re.I)},
+            {'itemprop': 'hiringOrganization'}
+        ]
+
+        for selector in selectors:
+            element = soup.find(['span', 'div', 'h1', 'h2', 'a'], selector)
+            if element:
+                return element.get_text(strip=True)
+
+        # Extract from URL as fallback
+        return self._extract_company_from_url(url)
+
+    def _extract_company_from_url(self, url: str) -> Optional[str]:
+        """Extract company name from URL"""
+        patterns = [
+            r'careers\.([^/.]+)\.',
+            r'jobs\.([^/.]+)\.',
+            r'https?://(?:www\.)?([^/.]+)\.'
+        ]
+
+        excluded = {'linkedin', 'indeed', 'glassdoor', 'ziprecruiter',
+                   'monster', 'careerbuilder', 'reddit', 'google'}
+
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                company = match.group(1)
+                if company.lower() not in excluded:
+                    return company.replace('-', ' ').replace('_', ' ').title()
+
+        return None
+
+    def _extract_location(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract location from HTML"""
+        # Try meta tags
+        meta = soup.find('meta', property='og:locality') or \
+               soup.find('meta', attrs={'name': 'geo.placename'})
+        if meta and meta.get('content'):
+            return meta['content'].strip()
+
+        # Try common selectors
+        selectors = [
+            {'class': re.compile(r'location', re.I)},
+            {'class': re.compile(r'job[-_]?location', re.I)},
+            {'itemprop': 'jobLocation'}
+        ]
+
+        for selector in selectors:
+            element = soup.find(['span', 'div', 'p'], selector)
+            if element:
+                text = element.get_text(strip=True)
+                if len(text) < 100:  # Sanity check
+                    return text
+
+        return None
+
+
+class JobDataCleaner:
+    @staticmethod
+    def clean_description(desc: str) -> str:
+        """Clean and truncate job description"""
+        if not desc or "failed" in desc.lower() or "error" in desc.lower():
+            return "Description unavailable"
+
+        # Remove excessive whitespace
+        desc = re.sub(r'\s+', ' ', desc)
+
+        # Remove common navigation text
+        patterns = [
+            r'Skip to.*?content',
+            r'Sign in.*?Join now',
+            r'LinkedIn.*?Language',
+            r'Copyright.*?\d{4}',
+            r'Apply now.*?button'
+        ]
+
+        for pattern in patterns:
+            desc = re.sub(pattern, '', desc, flags=re.IGNORECASE)
+
+        # Extract key sections
+        sections = []
+        keywords = ['experience', 'required', 'responsibilities', 'qualifications',
+                   'skills', 'degree', 'requirements', 'about', 'we are looking']
+
+        sentences = desc.split('.')
+        for sentence in sentences[:100]:
+            sentence = sentence.strip()
+            if any(kw in sentence.lower() for kw in keywords) and 20 < len(sentence) < 300:
+                sections.append(sentence)
+                if len(sections) >= 5:
+                    break
+
+        if sections:
+            summary = '. '.join(sections) + '.'
+        else:
+            summary = desc[:500].strip()
+
+        # Final truncation
+        if len(summary) > 800:
+            summary = summary[:800] + '...'
+
+        return summary.strip()
+
+    @staticmethod
+    def extract_location_from_title(title: str) -> Optional[str]:
+        """Extract location from job title"""
+        # US states and major cities
+        locations = re.findall(
+            r'\b(Remote|Hybrid|Texas|TX|California|CA|New York|NY|'
+            r'Austin|Dallas|Houston|San Antonio|Los Angeles|'
+            r'San Francisco|Seattle|Boston|Chicago)\b',
+            title,
+            re.IGNORECASE
+        )
+
+        if locations:
+            return ', '.join(dict.fromkeys(loc.title() for loc in locations))
+        return None
+
+    def clean_job_data(self, jobs: List[Dict]) -> List[Dict]:
+        """Process and clean job data"""
+        cleaned_jobs = []
+
+        for job in jobs:
+            # Fill in missing company
+            if not job.get('company'):
+                job['company'] = "Unknown"
+
+            # Fill in missing location
+            if not job.get('location'):
+                job['location'] = self.extract_location_from_title(job['title'])
+
+            if not job.get('location'):
+                job['location'] = "Location not specified"
+
+            # Clean description
+            job['description'] = self.clean_description(job.get('description', ''))
+
+
+            cleaned_jobs.append(job)
+
+        return cleaned_jobs
+
+
+def main():
+    # Load API credentials from environment variables (recommended)
+    API_KEY = os.getenv('GOOGLE_API_KEY', 'YOUR_API_KEY_HERE')
+    CSE_ID = os.getenv('GOOGLE_CSE_ID', 'YOUR_CSE_ID_HERE')
+
+    if API_KEY == 'YOUR_API_KEY_HERE':
+        logger.error("Please set GOOGLE_API_KEY environment variable")
+        return
+
+    # Get search query
+    query = input("Enter job search query (e.g., 'data scientist remote'): ").strip()
+    if not query:
+        logger.error("Query cannot be empty")
+        return
+
+    num_results = int(input("Number of results to fetch (default 20): ") or 20)
+
+    # Initialize scraper
+    scraper = JobScraper(API_KEY, CSE_ID)
+    cleaner = JobDataCleaner()
+
+    # Search for jobs
+    logger.info(f"Searching for: {query}")
+    jobs = scraper.search_jobs(query, num_results=num_results)
+    logger.info(f"Found {len(jobs)} job listings")
+
+    # Enrich with details
+    enriched_jobs = []
+    for i, job in enumerate(jobs, 1):
+        logger.info(f"Processing job {i}/{len(jobs)}: {job['title'][:60]}...")
+
+        details = scraper.extract_job_details(job['link'])
+
+        enriched_jobs.append({
+            "title": job['title'],
+            "company": details.get("company"),
+            "location": details.get("location"),
+            "url": job['link'],
+            "snippet": job['snippet'],
+            "description": details.get("description"),
+            "scrape_success": details.get("success", False)
+        })
+
+        time.sleep(2)  # Be respectful to servers
+
+    # Clean the data
+    logger.info("Cleaning job data...")
+    cleaned_jobs = cleaner.clean_job_data(enriched_jobs)
+
+    # Save results
+    timestamp = datetime.now().strftime('%m %d %Y')
+    output_file = f'job_results_{timestamp}.json'
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(cleaned_jobs, f, ensure_ascii=False, indent=2)
+
+    logger.info(f"✅ Saved {len(cleaned_jobs)} jobs to '{output_file}'")
+
+    # Print summary
+    successful_scrapes = sum(1 for j in cleaned_jobs if j.get('scrape_success'))
+    companies = {j['company'] for j in cleaned_jobs if j.get('company') and j['company'] != 'Unknown'}
+    locations = {j['location'] for j in cleaned_jobs if j.get('location') and j['location'] != 'Location not specified'}
+
+    print(f"\n📊 Summary:")
+    print(f"    Total jobs: {len(cleaned_jobs)}")
+    print(f"    Successful scrapes: {successful_scrapes}")
+    print(f"    Unique companies: {len(companies)}")
+    print(f"    Unique locations: {len(locations)}")
+
+
+if __name__ == "__main__":
+    main()
