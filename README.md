@@ -1,13 +1,16 @@
-# Project Showcase: "ML Concepts" and "Portfolio"
+# Project Showcase: "ML Concepts", "Portfolio", and "JobScraper"
 
-This repository contains two distinct, single-file web projects:
+This repository contains three distinct projects:
 
 1.  **ML Concepts**: An interactive guide to core machine learning concepts.
 2.  **Portfolio**: A personal portfolio website for a full-stack developer.
+3.  **JobScraper**: A Python script for scraping job postings.
 
 ## Running the Projects
 
-Both projects are self-contained static HTML files. To view them, simply open the `ML Concepts` or `Portfolio` file in your web browser.
+The "ML Concepts" and "Portfolio" projects are self-contained static HTML files. To view them, simply open the `ML Concepts` or `Portfolio` file in your web browser.
+
+The "JobScraper" project is a Python script. To run it, you will need to have Python installed, set the necessary environment variables for API keys, and then execute the script from your terminal.
 
 ## Project Details
 
@@ -33,3 +36,12 @@ This is a modern, responsive portfolio website for a full-stack developer named 
 *   **Dark Mode**: A theme toggle for user preference.
 
 The file for this project is `Portfolio`.
+
+### JobScraper
+
+This project is a Python script that scrapes job postings from the web using the Google Custom Search API. It extracts job details, cleans the data, and saves the results to a JSON file. Key features include:
+
+*   **Google Custom Search**: Uses the Google API to find job listings based on a search query.
+*   **HTML Parsing**: Extracts job descriptions, company names, and locations from the raw HTML of job posting pages.
+*   **Data Cleaning**: Cleans and formats the extracted data to be more readable and useful.
+*   **JSON Output**: Saves the cleaned job data to a JSON file for easy use in other applications.
